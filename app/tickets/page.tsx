@@ -6,6 +6,7 @@ import { peraWallet } from '@/components/WalletConnectButton'
 import QRDisplay from '@/components/QRDisplay'
 
 interface Ticket {
+  id: number
   event: {
     event_id: string
     name: string
@@ -46,14 +47,14 @@ export default function TicketsPage() {
     try {
       setLoading(true)
       setError('')
-      
+
       const response = await fetch(`/api/wallet/tickets?address=${address}`)
       const data = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch tickets')
       }
-      
+
       setTickets(data.tickets || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -88,7 +89,7 @@ export default function TicketsPage() {
         <section className="relative px-6 py-20 lg:px-12">
           <div className="max-w-4xl mx-auto">
             <div className="mb-8">
-              <button 
+              <button
                 onClick={handleCloseQR}
                 className="group relative cursor-pointer mb-6"
               >
@@ -104,7 +105,7 @@ export default function TicketsPage() {
               <h1 className="text-4xl lg:text-5xl font-bold mb-4">{selectedTicket.event.name}</h1>
               <p className="text-lg text-gray-300">{selectedTicket.event.description}</p>
             </div>
-            
+
             <div className="bg-gray-950 border border-gray-700 shadow-2xl backdrop-blur-sm">
               <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700">
                 <div className="flex items-center gap-3">
@@ -239,33 +240,28 @@ export default function TicketsPage() {
             <div className="max-w-6xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {tickets.map((ticket) => (
-                  <div 
-                    key={`${ticket.event.event_id}-${ticket.assetId}`}
-                    className="group relative h-full"
-                  >
+                  <div key={ticket.id} className="group relative h-full">
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 transform rotate-1 group-hover:rotate-2 transition-transform duration-300"></div>
-                    <div className={`relative bg-black border p-6 h-full flex flex-col justify-between transition-all duration-300 group-hover:shadow-xl group-hover:shadow-white/10 ${
-                      ticket.used 
-                        ? 'border-red-700 hover:border-red-500' 
-                        : 'border-gray-700 hover:border-white'
-                    }`}>
-                      
+                    <div className={`relative bg-black border p-6 h-full flex flex-col justify-between transition-all duration-300 group-hover:shadow-xl group-hover:shadow-white/10 ${ticket.used
+                      ? 'border-red-700 hover:border-red-500'
+                      : 'border-gray-700 hover:border-white'
+                      }`}>
+
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-bold text-white group-hover:text-gray-100">{ticket.event.name}</h3>
-                          <span className={`text-xs font-mono px-2 py-1 ${
-                            ticket.used 
-                              ? 'bg-red-900 text-red-400 border border-red-700' 
-                              : 'bg-green-900 text-green-400 border border-green-700'
-                          }`}>
+                          <span className={`text-xs font-mono px-2 py-1 ${ticket.used
+                            ? 'bg-red-900 text-red-400 border border-red-700'
+                            : 'bg-green-900 text-green-400 border border-green-700'
+                            }`}>
                             {ticket.used ? 'USED' : 'ACTIVE'}
                           </span>
                         </div>
-                        
+
                         <p className="text-gray-400 mb-4 group-hover:text-gray-300 text-sm leading-relaxed">
                           {ticket.event.description}
                         </p>
-                        
+
                         <div className="space-y-2 text-xs font-mono">
                           <div className="flex justify-between">
                             <span className="text-gray-500">ASA ID:</span>
@@ -286,15 +282,15 @@ export default function TicketsPage() {
 
                       <div className="mt-6 pt-4 border-t border-gray-800">
                         {!ticket.used ? (
-                          <button 
+                          <button
                             onClick={() => handleShowQR(ticket)}
                             className="w-full bg-white text-black font-bold py-3 px-4 transition-all duration-300 hover:bg-gray-100"
                           >
                             Generate QR Code
                           </button>
                         ) : (
-                          <button 
-                            disabled 
+                          <button
+                            disabled
                             className="w-full bg-gray-700 text-gray-400 font-bold py-3 px-4 cursor-not-allowed"
                           >
                             Ticket Used

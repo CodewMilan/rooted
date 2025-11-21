@@ -15,58 +15,60 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get all events to map ASA IDs to events
-    const { data: events, error: eventsError } = await supabaseAdmin
-      .from('events')
+    // Get tickets from database
+    const { data: dbTickets, error: ticketsError } = await supabaseAdmin
+      .from('tickets')
       .select('*')
+      .eq('user_address', walletAddress)
 
-    if (eventsError) {
-      console.error('Error fetching events:', eventsError)
+    if (ticketsError) {
+      console.error('Error fetching tickets:', ticketsError)
       return NextResponse.json(
-        { error: 'Failed to fetch events' },
+        { error: 'Failed to fetch tickets' },
         { status: 500 }
       )
     }
 
-    // Get user's assets from Algorand Indexer
-    const userAssets = await getAccountAssets(walletAddress)
-    
-    // Filter assets that match event ASA IDs
+    // Format tickets for response
     const tickets = []
-    for (const asset of userAssets) {
-      // Check against both database ASA ID and environment ASA ID
-      let matchingEvent = events?.find(e => e.asa_id === asset['asset-id'])
-      
-      // If no match and event has ASA ID 0, check against environment ASA ID
-      if (!matchingEvent) {
-        const envAsaId = process.env.EVENT_ASA_ID
-        if (envAsaId && envAsaId !== 'REPLACE_WITH_ASA_ID') {
-          const envAsaIdNum = parseInt(envAsaId)
-          if (asset['asset-id'] === envAsaIdNum) {
-            matchingEvent = events?.find(e => e.asa_id === 0 || !e.asa_id)
-          }
+
+    if (dbTickets && dbTickets.length > 0) {
+      for (const ticket of dbTickets) {
+        // Get event details for this ticket
+        const { data: eventData, error: eventError } = await supabaseAdmin
+          .from('events')
+          .select('*')
+          .eq('event_id', ticket.event_id)
+          .single()
+
+        if (eventError) {
+          console.error('Error fetching event:', eventError)
+          continue
         }
-      }
-      
-      if (matchingEvent && asset.amount > 0) {
-        // Check if ticket has been used
+
+        // Check if ticket has been used (checked in)
         const { data: checkIn } = await supabaseAdmin
           .from('checkins')
           .select('timestamp')
-          .eq('event_id', matchingEvent.event_id)
+          .eq('event_id', ticket.event_id)
           .eq('user_address', walletAddress)
           .single()
 
-        tickets.push({
-          event: {
-            ...matchingEvent,
-            asa_id: asset['asset-id'] // Use the actual ASA ID from blockchain
-          },
-          assetId: asset['asset-id'],
-          amount: asset.amount,
-          used: !!checkIn,
-          usedAt: checkIn?.timestamp || null
-        })
+        if (eventData) {
+          tickets.push({
+            id: ticket.id, // Add unique ticket ID
+            event: {
+              event_id: eventData.event_id,
+              name: eventData.name,
+              description: eventData.description,
+              asa_id: ticket.asa_id // Use the ASA ID from the ticket record
+            },
+            assetId: ticket.asa_id,
+            amount: ticket.amount,
+            used: !!checkIn,
+            usedAt: checkIn?.timestamp || null
+          })
+        }
       }
     }
 

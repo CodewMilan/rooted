@@ -125,6 +125,7 @@ export default function EventsPage() {
       }
 
       alert(`Ticket purchased successfully for ${event.name}!`)
+      window.location.href = '/tickets'
 
     } catch (err) {
       console.error('Purchase error:', err)

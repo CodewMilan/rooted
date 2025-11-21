@@ -11,7 +11,7 @@ interface QRDisplayProps {
 
 export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplayProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
-  const [timeLeft, setTimeLeft] = useState<number>(20)
+  const [timeLeft, setTimeLeft] = useState<number>(5)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string>('')
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -82,7 +82,7 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
       })
 
       setQrDataUrl(qrDataUrl)
-      setTimeLeft(20) // Reset timer
+      setTimeLeft(5) // Reset timer
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -103,7 +103,7 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
       setTimeLeft((prev) => {
         if (prev <= 1) {
           generateQRCode()
-          return 20
+          return 5
         }
         return prev - 1
       })
@@ -122,8 +122,8 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
         <div className="bg-red-950 border border-red-700 p-6 mb-4">
           <div className="text-red-400 text-lg mb-4">❌ QR Generation Failed</div>
           <p className="text-red-300 text-sm mb-4">{error}</p>
-          <button 
-            onClick={generateQRCode} 
+          <button
+            onClick={generateQRCode}
             className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 transition-colors"
           >
             Retry
@@ -154,23 +154,23 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
           </div>
         )}
       </div>
-      
+
       <div className="bg-gray-900 border border-gray-700 p-4 mb-6">
         <div className="flex items-center justify-center gap-4 mb-3">
           <span className="text-gray-400 text-sm">Refreshes in:</span>
           <span className="text-white text-xl font-bold font-mono">{timeLeft}s</span>
         </div>
         <div className="w-full bg-gray-800 h-2">
-          <div 
-            className="bg-white h-2 transition-all duration-1000 ease-linear" 
-            style={{ width: `${(timeLeft / 20) * 100}%` }}
+          <div
+            className="bg-white h-2 transition-all duration-1000 ease-linear"
+            style={{ width: `${(timeLeft / 5) * 100}%` }}
           ></div>
         </div>
       </div>
 
       <div className="text-gray-400 text-sm space-y-2">
         <p>• Show this QR code to the scanner at the venue entrance</p>
-        <p>• Code refreshes every 20 seconds for security</p>
+        <p>• Code refreshes every 5 seconds for security</p>
         <p>• Must be within venue radius to generate</p>
       </div>
     </div>

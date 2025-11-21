@@ -111,7 +111,7 @@ def main():
     Main function to create ASA from BIP39 mnemonic
     """
     # Your 24-word BIP39 mnemonic
-    mnemonic = "crowd awkward correct unable tube analyst wash mind collect crumble trip legal increase medal segment vapor stay battle scene retreat later destroy battle vacuum"
+    mnemonic = "fresh toss cover wheat close federal behave symbol cover ribbon shine engine fiscal tuna scrub shed zoo lobster orchard april control satisfy youth sun"
     
     print("🚀 AuthenTIX ASA Creation Script")
     print("=" * 50)

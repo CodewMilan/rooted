@@ -34,7 +34,7 @@ export async function getAccountAssets(walletAddress: string) {
     const accountInfo = await indexerClient
       .lookupAccountByID(walletAddress)
       .do()
-    
+
     return accountInfo.account.assets || []
   } catch (error) {
     console.error('Error getting account assets:', error)
@@ -46,7 +46,7 @@ export async function checkAssetOwnership(walletAddress: string, assetId: number
   try {
     const assets = await getAccountAssets(walletAddress)
     const asset = assets.find((a: any) => a['asset-id'] === assetId)
-    return asset && asset.amount > 0
+    return !!(asset && asset.amount > 0)
   } catch (error) {
     console.error('Error checking asset ownership:', error)
     return false
@@ -61,8 +61,8 @@ export function createPaymentTransaction(
   note?: string
 ) {
   return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from,
-    to,
+    sender: from,
+    receiver: to,
     amount,
     suggestedParams,
     note: note ? new TextEncoder().encode(note) : undefined
@@ -78,8 +78,8 @@ export function createAssetTransferTransaction(
   note?: string
 ) {
   return algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-    from,
-    to,
+    sender: from,
+    receiver: to,
     assetIndex,
     amount,
     suggestedParams,
@@ -93,8 +93,8 @@ export function createAssetOptInTransaction(
   suggestedParams: algosdk.SuggestedParams
 ) {
   return algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-    from,
-    to: from, // Opt-in transaction sends to self
+    sender: from,
+    receiver: from, // Opt-in transaction sends to self
     assetIndex,
     amount: 0,
     suggestedParams
@@ -103,7 +103,8 @@ export function createAssetOptInTransaction(
 
 export async function submitSignedTransaction(signedTxn: Uint8Array) {
   try {
-    const { txId } = await algodClient.sendRawTransaction(signedTxn).do()
+    const response = await algodClient.sendRawTransaction(signedTxn).do()
+    const txId = (response as any).txId
     await algosdk.waitForConfirmation(algodClient, txId, 4)
     return txId
   } catch (error) {

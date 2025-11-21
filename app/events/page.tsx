@@ -1,5 +1,6 @@
 'use client'
 
+import algosdk from 'algosdk'
 import { useState, useEffect } from 'react'
 import { peraWallet } from '@/components/WalletConnectButton'
 
@@ -42,11 +43,11 @@ export default function EventsPage() {
     try {
       const response = await fetch('/api/events')
       const data = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch events')
       }
-      
+
       setEvents(data.events || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -93,9 +94,15 @@ export default function EventsPage() {
       }
 
       console.log('Signing transactions with Pera Wallet...')
-      
+
+      // Decode transactions for Pera Wallet
+      const txnsToSign = data.txnsToSign.map((item: { txn: string, signers: string[] }) => ({
+        txn: algosdk.decodeUnsignedTransaction(Buffer.from(item.txn, 'base64')),
+        signers: item.signers
+      }))
+
       // Sign transactions with Pera Wallet
-      const signedTxns = await peraWallet.signTransaction(data.txnsToSign)
+      const signedTxns = await peraWallet.signTransaction([txnsToSign])
       console.log('Transactions signed successfully')
 
       // Submit signed transactions
@@ -122,10 +129,10 @@ export default function EventsPage() {
     } catch (err) {
       console.error('Purchase error:', err)
       let errorMessage = 'Purchase failed'
-      
+
       if (err instanceof Error) {
         errorMessage = err.message
-        
+
         // Handle specific error cases
         if (err.message.includes('User rejected')) {
           errorMessage = 'Transaction was cancelled by user'
@@ -135,7 +142,7 @@ export default function EventsPage() {
           errorMessage = 'Network connection error. Please try again.'
         }
       }
-      
+
       setError(errorMessage)
     } finally {
       setPurchasing('')
@@ -219,17 +226,17 @@ export default function EventsPage() {
                   <div key={event.event_id} className="group relative h-full">
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 transform rotate-1 group-hover:rotate-2 transition-transform duration-300"></div>
                     <div className="relative bg-black border border-gray-700 p-6 h-full flex flex-col justify-between hover:border-white transition-all duration-300 group-hover:shadow-xl group-hover:shadow-white/10">
-                      
+
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-bold text-white group-hover:text-gray-100">{event.name}</h3>
                           <span className="text-xs text-gray-500 font-mono">{event.event_id}</span>
                         </div>
-                        
+
                         <p className="text-gray-400 mb-4 group-hover:text-gray-300 text-sm leading-relaxed">
                           {event.description}
                         </p>
-                        
+
                         <div className="space-y-2 text-xs font-mono">
                           <div className="flex justify-between">
                             <span className="text-gray-500">ASA ID:</span>
@@ -255,9 +262,9 @@ export default function EventsPage() {
                           <span className="text-white font-bold">Price: 1 ALGO</span>
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         </div>
-                        
+
                         {walletAddress ? (
-                          <button 
+                          <button
                             onClick={() => handlePurchaseTicket(event)}
                             disabled={purchasing === event.event_id}
                             className="w-full bg-white text-black font-bold py-3 px-4 transition-all duration-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -272,8 +279,8 @@ export default function EventsPage() {
                             )}
                           </button>
                         ) : (
-                          <button 
-                            disabled 
+                          <button
+                            disabled
                             className="w-full bg-gray-700 text-gray-400 font-bold py-3 px-4 cursor-not-allowed"
                           >
                             Connect Wallet to Purchase

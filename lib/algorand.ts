@@ -35,7 +35,34 @@ export async function getAccountAssets(walletAddress: string) {
       .lookupAccountByID(walletAddress)
       .do()
 
-    return accountInfo.account.assets || []
+    const assets = accountInfo.account.assets || []
+    
+    // Log raw asset structure for debugging (convert BigInt to string to avoid serialization issues)
+    if (assets.length > 0) {
+      const firstAsset = assets[0]
+      const loggableAsset = {
+        assetId: firstAsset.assetId?.toString() || firstAsset['asset-id']?.toString(),
+        amount: firstAsset.amount?.toString(),
+        'is-frozen': firstAsset['is-frozen'] || firstAsset.isFrozen,
+        deleted: firstAsset.deleted
+      }
+      console.log('Raw asset structure from indexer:', loggableAsset)
+    }
+    
+    // The indexer returns assets with 'assetId' (camelCase) not 'asset-id' (kebab-case)
+    // Normalize to use 'asset-id' for consistency and convert BigInt to number
+    return assets.map((asset: any) => {
+      // Convert BigInt values to numbers for easier handling
+      const normalizedAsset: any = {
+        ...asset,
+        // Handle both property names
+        'asset-id': asset['asset-id'] || (asset.assetId ? Number(asset.assetId) : undefined),
+        assetId: asset.assetId ? Number(asset.assetId) : (asset['asset-id'] ? Number(asset['asset-id']) : undefined),
+        amount: asset.amount ? Number(asset.amount) : 0
+      }
+      
+      return normalizedAsset
+    })
   } catch (error) {
     console.error('Error getting account assets:', error)
     throw new Error(`Failed to get assets for wallet: ${walletAddress}`)
@@ -45,7 +72,10 @@ export async function getAccountAssets(walletAddress: string) {
 export async function checkAssetOwnership(walletAddress: string, assetId: number): Promise<boolean> {
   try {
     const assets = await getAccountAssets(walletAddress)
-    const asset = assets.find((a: any) => a['asset-id'] === assetId)
+    // Try both property names: 'asset-id' (kebab-case) and 'assetId' (camelCase)
+    const asset = assets.find((a: any) => 
+      a['asset-id'] === assetId || a.assetId === assetId
+    )
     return !!(asset && asset.amount > 0)
   } catch (error) {
     console.error('Error checking asset ownership:', error)

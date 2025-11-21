@@ -11,7 +11,7 @@ interface QRDisplayProps {
 
 export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplayProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
-  const [timeLeft, setTimeLeft] = useState<number>(5)
+  const [timeLeft, setTimeLeft] = useState<number>(20)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string>('')
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -95,7 +95,7 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
       })
 
       setQrDataUrl(qrDataUrl)
-      setTimeLeft(5) // Reset timer
+      setTimeLeft(20) // Reset timer to 20 seconds
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -116,7 +116,7 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
       setTimeLeft((prev) => {
         if (prev <= 1) {
           generateQRCode()
-          return 5
+          return 20
         }
         return prev - 1
       })
@@ -176,14 +176,14 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
         <div className="w-full bg-gray-800 h-2">
           <div
             className="bg-white h-2 transition-all duration-1000 ease-linear"
-            style={{ width: `${(timeLeft / 5) * 100}%` }}
+            style={{ width: `${(timeLeft / 20) * 100}%` }}
           ></div>
         </div>
       </div>
 
       <div className="text-gray-400 text-sm space-y-2">
         <p>• Show this QR code to the scanner at the venue entrance</p>
-        <p>• Code refreshes every 5 seconds for security</p>
+        <p>• Code refreshes every 20 seconds for security</p>
         <p>• Must be within venue radius to generate</p>
       </div>
     </div>

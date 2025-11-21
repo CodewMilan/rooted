@@ -31,7 +31,15 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
           })
         },
         (error) => {
-          reject(new Error(`Location error: ${error.message}`))
+          if (error.code === error.PERMISSION_DENIED) {
+            reject(new Error('Location access denied. Please enable location permissions in your browser settings to generate QR codes.'))
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            reject(new Error('Location information unavailable. Please check your device settings.'))
+          } else if (error.code === error.TIMEOUT) {
+            reject(new Error('Location request timed out. Please try again.'))
+          } else {
+            reject(new Error(`Location error: ${error.message}`))
+          }
         },
         {
           enableHighAccuracy: true,
@@ -48,7 +56,12 @@ export default function QRDisplay({ walletAddress, eventId, onError }: QRDisplay
       setError('')
 
       // Get user's current location
-      const location = await getUserLocation()
+      let location
+      try {
+        location = await getUserLocation()
+      } catch (locationError) {
+        throw locationError
+      }
 
       // Call API to generate QR token
       const response = await fetch('/api/generate-qr', {

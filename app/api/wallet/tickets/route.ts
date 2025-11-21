@@ -34,18 +34,34 @@ export async function GET(request: NextRequest) {
     // Filter assets that match event ASA IDs
     const tickets = []
     for (const asset of userAssets) {
-      const event = events?.find(e => e.asa_id === asset['asset-id'])
-      if (event && asset.amount > 0) {
+      // Check against both database ASA ID and environment ASA ID
+      let matchingEvent = events?.find(e => e.asa_id === asset['asset-id'])
+      
+      // If no match and event has ASA ID 0, check against environment ASA ID
+      if (!matchingEvent) {
+        const envAsaId = process.env.EVENT_ASA_ID
+        if (envAsaId && envAsaId !== 'REPLACE_WITH_ASA_ID') {
+          const envAsaIdNum = parseInt(envAsaId)
+          if (asset['asset-id'] === envAsaIdNum) {
+            matchingEvent = events?.find(e => e.asa_id === 0 || !e.asa_id)
+          }
+        }
+      }
+      
+      if (matchingEvent && asset.amount > 0) {
         // Check if ticket has been used
         const { data: checkIn } = await supabaseAdmin
           .from('checkins')
           .select('timestamp')
-          .eq('event_id', event.event_id)
-          .eq('wallet_address', walletAddress)
+          .eq('event_id', matchingEvent.event_id)
+          .eq('user_address', walletAddress)
           .single()
 
         tickets.push({
-          event,
+          event: {
+            ...matchingEvent,
+            asa_id: asset['asset-id'] // Use the actual ASA ID from blockchain
+          },
           assetId: asset['asset-id'],
           amount: asset.amount,
           used: !!checkIn,

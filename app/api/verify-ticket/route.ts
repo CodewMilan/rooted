@@ -6,7 +6,7 @@ import { checkAssetOwnership } from '@/lib/algorand'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { qrPayload, scannerLat, scannerLng } = body
+    const { qrPayload, scannerLat, scannerLng, verifiedBy } = body
 
     // Validate QR payload structure
     if (!qrPayload || !qrPayload.walletAddress || !qrPayload.eventId || !qrPayload.token) {
@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
     // Check if ticket has already been used
     const { data: existingCheckIn } = await supabaseAdmin
       .from('checkins')
-      .select('checkin_id')
+      .select('id')
       .eq('event_id', payload.eventId)
-      .eq('wallet_address', payload.walletAddress)
+      .eq('user_address', payload.walletAddress)
       .single()
 
     if (existingCheckIn) {
@@ -59,8 +59,21 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Get ASA ID - use EVENT_ASA_ID from environment if event ASA ID is not set
+    let asaId = event.asa_id
+    if (!asaId || asaId === 0) {
+      const envAsaId = process.env.EVENT_ASA_ID
+      if (!envAsaId || envAsaId === 'REPLACE_WITH_ASA_ID') {
+        return NextResponse.json({
+          valid: false,
+          error: 'Event ASA ID not configured'
+        })
+      }
+      asaId = parseInt(envAsaId)
+    }
+
     // Verify current ASA ownership (anti-resell protection)
-    const ownsTicket = await checkAssetOwnership(payload.walletAddress, event.asa_id)
+    const ownsTicket = await checkAssetOwnership(payload.walletAddress, asaId)
     if (!ownsTicket) {
       return NextResponse.json({
         valid: false,
@@ -68,19 +81,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Get user profile
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('wallet_address', payload.walletAddress)
-      .single()
-
     // Mark ticket as used (create check-in record)
     const { error: checkInError } = await supabaseAdmin
       .from('checkins')
       .insert({
+        user_address: payload.walletAddress,
         event_id: payload.eventId,
-        wallet_address: payload.walletAddress,
+        verified_by: verifiedBy || 'scanner',
         scanner_location_lat: scannerLat,
         scanner_location_lng: scannerLng
       })
@@ -101,7 +108,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       valid: true,
-      user: user || { 
+      name: `User ${payload.walletAddress.slice(0, 8)}...`,
+      address: payload.walletAddress,
+      timestamp: new Date().toISOString(),
+      user: { 
         wallet_address: payload.walletAddress,
         name: `User ${payload.walletAddress.slice(0, 8)}...`
       },

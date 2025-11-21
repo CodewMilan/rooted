@@ -2,18 +2,22 @@
   "name": "rooted",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "create:asa": "node scripts/createAsaFromMnemonic.js"
   },
   "dependencies": {
     "@perawallet/connect": "^1.4.2",
     "@supabase/supabase-js": "^2.39.0",
     "algosdk": "^3.5.2",
     "crypto-js": "^4.2.0",
+    "dotenv": "^16.6.1",
     "jsqr": "^1.4.0",
+    "lucide-react": "^0.460.0",
     "next": "16.0.3",
     "qrcode": "^1.5.3",
     "react": "19.2.0",

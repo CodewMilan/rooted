@@ -61,9 +61,17 @@ export default function EventsPage() {
       return
     }
 
+    // Check if ASA ID is configured
+    if (!event.asa_id || event.asa_id === 0) {
+      setError('This event\'s ASA ID is not configured yet. Please run: npm run create:asa')
+      return
+    }
+
     try {
       setPurchasing(event.event_id)
       setError('')
+
+      console.log('Starting ticket purchase for event:', event.event_id)
 
       // Create transaction group
       const response = await fetch('/api/buy-ticket', {
@@ -78,13 +86,17 @@ export default function EventsPage() {
       })
 
       const data = await response.json()
+      console.log('API response:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create transaction')
       }
 
+      console.log('Signing transactions with Pera Wallet...')
+      
       // Sign transactions with Pera Wallet
       const signedTxns = await peraWallet.signTransaction(data.txnsToSign)
+      console.log('Transactions signed successfully')
 
       // Submit signed transactions
       const submitResponse = await fetch('/api/buy-ticket', {
@@ -109,7 +121,22 @@ export default function EventsPage() {
 
     } catch (err) {
       console.error('Purchase error:', err)
-      setError(err instanceof Error ? err.message : 'Purchase failed')
+      let errorMessage = 'Purchase failed'
+      
+      if (err instanceof Error) {
+        errorMessage = err.message
+        
+        // Handle specific error cases
+        if (err.message.includes('User rejected')) {
+          errorMessage = 'Transaction was cancelled by user'
+        } else if (err.message.includes('ASA ID not configured')) {
+          errorMessage = 'Event ASA ID not configured. Please contact the organizer.'
+        } else if (err.message.includes('network')) {
+          errorMessage = 'Network connection error. Please try again.'
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setPurchasing('')
     }

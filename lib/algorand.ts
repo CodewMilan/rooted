@@ -1,5 +1,16 @@
 import algosdk from 'algosdk'
 
+// Asset type definition
+export interface AlgorandAsset {
+  'asset-id'?: number
+  assetId?: number
+  amount: number
+  'is-frozen'?: boolean
+  isFrozen?: boolean
+  deleted?: boolean
+  [key: string]: unknown // Allow other properties from indexer
+}
+
 // Algorand client configuration
 const algodUrl = process.env.ALGOD_URL!
 const algodToken = process.env.ALGOD_TOKEN || ''
@@ -29,7 +40,7 @@ export async function getAssetInfo(assetId: number) {
   }
 }
 
-export async function getAccountAssets(walletAddress: string) {
+export async function getAccountAssets(walletAddress: string): Promise<AlgorandAsset[]> {
   try {
     const accountInfo = await indexerClient
       .lookupAccountByID(walletAddress)
@@ -51,14 +62,18 @@ export async function getAccountAssets(walletAddress: string) {
     
     // The indexer returns assets with 'assetId' (camelCase) not 'asset-id' (kebab-case)
     // Normalize to use 'asset-id' for consistency and convert BigInt to number
-    return assets.map((asset: any) => {
+    return assets.map((asset: unknown): AlgorandAsset => {
+      const rawAsset = asset as { 'asset-id'?: bigint | number; assetId?: bigint | number; amount?: bigint | number; 'is-frozen'?: boolean; isFrozen?: boolean; deleted?: boolean; [key: string]: unknown }
       // Convert BigInt values to numbers for easier handling
-      const normalizedAsset: any = {
-        ...asset,
+      const normalizedAsset: AlgorandAsset = {
+        ...rawAsset,
         // Handle both property names
-        'asset-id': asset['asset-id'] || (asset.assetId ? Number(asset.assetId) : undefined),
-        assetId: asset.assetId ? Number(asset.assetId) : (asset['asset-id'] ? Number(asset['asset-id']) : undefined),
-        amount: asset.amount ? Number(asset.amount) : 0
+        'asset-id': rawAsset['asset-id'] ? Number(rawAsset['asset-id']) : (rawAsset.assetId ? Number(rawAsset.assetId) : undefined),
+        assetId: rawAsset.assetId ? Number(rawAsset.assetId) : (rawAsset['asset-id'] ? Number(rawAsset['asset-id']) : undefined),
+        amount: rawAsset.amount ? Number(rawAsset.amount) : 0,
+        'is-frozen': rawAsset['is-frozen'] ?? rawAsset.isFrozen,
+        isFrozen: rawAsset.isFrozen ?? rawAsset['is-frozen'],
+        deleted: rawAsset.deleted
       }
       
       return normalizedAsset
@@ -73,7 +88,7 @@ export async function checkAssetOwnership(walletAddress: string, assetId: number
   try {
     const assets = await getAccountAssets(walletAddress)
     // Try both property names: 'asset-id' (kebab-case) and 'assetId' (camelCase)
-    const asset = assets.find((a: any) => 
+    const asset = assets.find((a: AlgorandAsset) => 
       a['asset-id'] === assetId || a.assetId === assetId
     )
     return !!(asset && asset.amount > 0)

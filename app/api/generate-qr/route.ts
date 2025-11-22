@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       const allAssets = await getAccountAssets(walletAddress)
       
       // Try both property names (asset-id and assetId)
-      const matchingAsset = allAssets.find((a: any) => 
+      const matchingAsset = allAssets.find((a) => 
         a['asset-id'] === asaId || a.assetId === asaId
       )
       
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
           amount: matchingAsset.amount,
           'is-frozen': matchingAsset['is-frozen'] || matchingAsset.isFrozen
         } : 'NOT FOUND',
-        allAssetIds: allAssets.map((a: any) => a['asset-id'] || a.assetId).slice(0, 10),
+        allAssetIds: allAssets.map((a) => a['asset-id'] || a.assetId).slice(0, 10),
         firstAssetKeys: assetKeys,
         firstAssetSample: safeFirstAsset
       })

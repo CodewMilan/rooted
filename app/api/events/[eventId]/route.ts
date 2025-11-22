@@ -4,10 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 // GET /api/events/[eventId] - Fetch specific event
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const { eventId } = params
+    const { eventId } = await params
 
     const { data: event, error } = await supabaseAdmin
       .from('events')

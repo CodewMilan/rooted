@@ -104,9 +104,14 @@ export default function EventsPage() {
 
       // Sign transactions with Pera Wallet
       const signedTxns = await peraWallet.signTransaction([txnsToSign])
-      console.log('Transactions signed successfully')
+      console.log('Transactions signed successfully', signedTxns)
 
-      // Submit signed transactions
+      // Convert signed transactions to base64 for submission
+      const signedTxnsBase64 = signedTxns.map((txn: Uint8Array) => 
+        Buffer.from(txn).toString('base64')
+      )
+
+      // Submit signed transactions to server for processing
       const submitResponse = await fetch('/api/buy-ticket', {
         method: 'PUT',
         headers: {
@@ -115,7 +120,7 @@ export default function EventsPage() {
         body: JSON.stringify({
           walletAddress,
           eventId: event.event_id,
-          txId: 'pending' // In a real implementation, you'd get the actual txId
+          signedTransactions: signedTxnsBase64
         })
       })
 
@@ -124,6 +129,8 @@ export default function EventsPage() {
       if (!submitResponse.ok) {
         throw new Error(submitData.error || 'Failed to confirm purchase')
       }
+
+      console.log('Transaction submitted successfully:', submitData.txId)
 
       alert(`Ticket purchased successfully for ${event.name}!`)
       window.location.href = '/tickets'

@@ -186,11 +186,18 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { walletAddress, eventId, txId } = body
+    const { walletAddress, eventId, signedTransactions } = body
 
-    if (!walletAddress || !eventId || !txId) {
+    if (!walletAddress || !eventId || !signedTransactions) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: walletAddress, eventId, signedTransactions' },
+        { status: 400 }
+      )
+    }
+
+    if (!Array.isArray(signedTransactions) || signedTransactions.length === 0) {
+      return NextResponse.json(
+        { error: 'Invalid signed transactions format' },
         { status: 400 }
       )
     }
@@ -218,7 +225,51 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Store ticket purchase in database
+    // Submit signed transactions to Algorand network
+    const { algodClient } = await import('@/lib/algorand')
+    const algosdk = await import('algosdk')
+    
+    let txId: string | null = null
+
+    try {
+      // Convert base64 signed transactions to Uint8Array
+      const signedTxnsBytes = signedTransactions.map((txnBase64: string) => 
+        Buffer.from(txnBase64, 'base64')
+      )
+
+      // Submit all transactions (grouped transactions must be submitted together)
+      // Algorand accepts an array of transactions for grouped transactions
+      const response = await algodClient.sendRawTransaction(signedTxnsBytes).do()
+      
+      // Get the transaction ID (for grouped transactions, this is the group ID)
+      txId = (response as any).txId || (response as any).txid
+      
+      if (!txId) {
+        throw new Error('No transaction ID returned from network')
+      }
+
+      console.log('Transactions submitted successfully. Transaction ID:', txId)
+
+      // Wait for confirmation (optional, but good for ensuring transaction is processed)
+      try {
+        await algosdk.waitForConfirmation(algodClient, txId, 4)
+        console.log('Transaction confirmed on network')
+      } catch (confirmationError) {
+        // Don't fail if confirmation times out - transaction might still be processing
+        console.warn('Transaction confirmation timeout (transaction may still be processing):', confirmationError)
+      }
+
+    } catch (error) {
+      console.error('Error submitting transactions:', error)
+      return NextResponse.json(
+        { 
+          error: `Failed to submit transaction to network: ${error instanceof Error ? error.message : 'Unknown error'}` 
+        },
+        { status: 500 }
+      )
+    }
+
+    // Store ticket purchase in database with the actual transaction ID
     const { error: ticketError } = await supabaseAdmin
       .from('tickets')
       .insert({
@@ -232,6 +283,9 @@ export async function PUT(request: NextRequest) {
     if (ticketError) {
       console.error('Error storing ticket:', ticketError)
       // Don't fail the request if we can't store the ticket, as the blockchain transaction succeeded
+      // But log it for debugging
+    } else {
+      console.log('Ticket stored in database with txId:', txId)
     }
 
     return NextResponse.json({

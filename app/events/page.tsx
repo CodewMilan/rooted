@@ -23,6 +23,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState<string>('')
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState<{ eventName: string } | null>(null)
 
   useEffect(() => {
     fetchEvents()
@@ -172,8 +173,14 @@ export default function EventsPage() {
 
       console.log('Transaction submitted successfully:', submitData.txId)
 
-      alert(`Ticket purchased successfully for ${event.name}!`)
-      window.location.href = '/tickets'
+      // Show success message in UI
+      setSuccessMessage({ eventName: event.name })
+      setError('')
+      
+      // Redirect to tickets page after 3 seconds
+      setTimeout(() => {
+        window.location.href = '/tickets'
+      }, 3000)
 
     } catch (err) {
       console.error('Purchase error:', err)
@@ -242,6 +249,35 @@ export default function EventsPage() {
               Purchase tickets for upcoming events using your Algorand wallet
             </p>
           </div>
+
+          {successMessage && (
+            <div className="max-w-4xl mx-auto mb-8">
+              <div className="bg-gray-950 border border-green-700 shadow-2xl backdrop-blur-sm">
+                <div className="flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-green-700">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2">
+                      <div className="w-3 h-3 bg-green-500"></div>
+                      <div className="w-3 h-3 bg-green-500"></div>
+                      <div className="w-3 h-3 bg-green-500"></div>
+                    </div>
+                    <span className="text-green-400 text-sm">purchase-success</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-green-500 text-xs">SUCCESS</span>
+                  </div>
+                </div>
+                <div className="p-6 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <div className="text-green-400 text-2xl">✓</div>
+                    <div className="text-green-400 text-xl font-bold">Ticket Purchased Successfully!</div>
+                  </div>
+                  <div className="text-white text-lg mb-2">{successMessage.eventName}</div>
+                  <div className="text-gray-400 text-sm">Redirecting to your tickets...</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="max-w-4xl mx-auto mb-8">
